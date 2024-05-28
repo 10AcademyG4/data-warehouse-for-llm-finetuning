@@ -3,7 +3,7 @@ services:
     image: mongo
     container_name: mongodb
     ports:
-      - "27018:27017"
+      - "27019:27017"
     volumes:
       - mongodb_data_container:/data/db
 
@@ -74,6 +74,21 @@ services:
 
     ports:
       - "6068:6066"
+
+
+  faust_save_news:
+    build:
+      context: ./faust
+      dockerfile: Dockerfile.save_news
+    volumes:
+      - ./faust:/app
+    depends_on:
+      - kafka
+    environment:
+    - KAFKA_BROKER_URL=kafka://kafka:9092
+
+    ports:
+      - "6069:6066"
 
   scraper:
     build: ./scraper
