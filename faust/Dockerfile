@@ -9,7 +9,7 @@ ADD . /app
 
 
 # Update the system and install entr application
-RUN apt-get update && apt-get install -y entr
+RUN apt-get update && apt-get install -y entr supervisor
 
 # Install any needed packages specified in requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
@@ -21,6 +21,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY wait-for-it.sh .
 RUN chmod +x wait-for-it.sh
 
+# Copy the supervisord configuration file
+# COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
 # # Create a shell script that runs wait-for-it.sh and then faust
 # # The wait-for-it.sh script is used to wait for the Kafka container to be ready
 # RUN echo -e '#!/bin/sh\n./wait-for-it.sh kafka:9092 -- faust -A app worker -l info' > start.sh
@@ -31,3 +34,8 @@ RUN chmod +x wait-for-it.sh
 
 # Run the start.sh script when the container launches
 CMD ls *.py | entr -r ./start.sh
+
+
+# CMD ["/usr/bin/supervisord"]
+
+# CMD ["faust", "-A", "save_raw_news", "worker", "-l", "info"]
