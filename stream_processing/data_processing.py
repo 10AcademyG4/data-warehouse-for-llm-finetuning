@@ -1,5 +1,5 @@
-import requests
-from bs4 import BeautifulSoup
+# import requests
+# from bs4 import BeautifulSoup
 import re
 
 
@@ -77,3 +77,12 @@ def normalize_char_level_missmatch(input_token):
     return rep48
 
 
+def main():
+    # text = input("Enter the text: ")
+    text="ባለቤቷ ሹዋን በ1990ዎቹ"
+
+    cleaned_text = clean_data(text)
+    print(cleaned_text)
+
+if __name__ == "__main__":
+    main()
