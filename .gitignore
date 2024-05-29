@@ -4,6 +4,11 @@ data
 
 logs
 
+faust-env
+*last_page.txt
+
+supervisord.log
+
 geckodriver
 geckodriver*
 chromedriver*
