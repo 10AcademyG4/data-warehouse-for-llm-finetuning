@@ -1,0 +1,23 @@
+# faust-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: faust-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: faust
+  template:
+    metadata:
+      labels:
+        app: faust
+    spec:
+      containers:
+      - name: faust
+        image: hilare/llm-faust:latest
+        ports:
+        - containerPort: 6066
+        env:
+        - name: KAFKA_BROKER_URL
+          value: "kafka://kafka:9092"
