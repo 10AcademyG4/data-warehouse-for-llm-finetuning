@@ -1,24 +1,38 @@
-from news_scrapper import NewsScraper, NewsCategory
+from news_scrapper import NewsScraper
 import pprint
+import time
+from kafka.errors import NoBrokersAvailable
 
 def hello():
     url = 'https://am.al-ain.com/'
-    pages_to_scrape = 2
-    try:
-        print("Scraping started ")
+    pages_to_scrape = 1
+    MAX_RETRIES = 5
+    RETRY_DELAY = 2  # delay between retries in seconds
 
-        scraper = NewsScraper(url, pages_to_scrape)
-        # Initialize the scraper for a specific category
-        # scraper.initialize_driver(NewsCategory.POLITICS)
+    while True:
+        for i in range(MAX_RETRIES):
+            try:
+                print("Scraping started ")
+
+                scraper = NewsScraper(url, pages_to_scrape)
+                # If the initialization is successful, break from the loop
+                break
+            except NoBrokersAvailable as e:
+                print(f"An error occurred: {e}")
+                if i < MAX_RETRIES - 1:  # No need to sleep on the last iteration
+                    time.sleep(RETRY_DELAY)
+                else:
+                    raise  # Re-raise the last exception if all retries failed
+            except Exception as e:
+                print(f"An unexpected error occurred: {e}")
+                raise
+
         news = scraper.scrape_news()
-        for article in news:
-            pprint(article)
 
-        # Get the next article value
-        # article = sc.get_next_article_value()
+        pages_to_scrape += 1
 
-    except Exception as e:
-        print(f"An error occurred: {e}")
+        # for article in news:
+        #     pprint.pprint(article)
 
 if __name__ == "__main__":
     hello()
