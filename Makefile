@@ -1,8 +1,9 @@
-.PHONY: up init down clean serve test up_without_faust up_faust start_airflow airflow_init stop_airflow build_faust build_scraper up_scraper
+.PHONY: up init down clean serve test up_without_faust up_faust start_airflow airflow_init stop_airflow build_faust build_scraper up_scraper build_faust_save_news up_faust_save_news
 
 up:
 	make up_without_faust
 	make up_faust
+	make up_faust_save_news
 	make up_scraper
 	make start_airflow
 	make serve
@@ -16,6 +17,13 @@ up_without_faust:
 up_faust:
 	make build_faust
 	docker compose -f compose.yaml up -d faust
+
+build_faust_save_news:
+	docker compose -f compose.yaml build faust_save_news
+
+up_faust_save_news:
+	make build_faust_save_news
+	docker compose -f compose.yaml up -d faust_save_news
 
 build_faust:
 	docker compose -f compose.yaml build faust
