@@ -16,18 +16,34 @@ from selenium.webdriver.support import expected_conditions as EC
 from pprint import pprint
 
 from kafka import KafkaProducer
+from kafka.errors import NoBrokersAvailable
+import time
 
-KAFKA_TOPIC = 'scraped_news'
+KAFKA_TOPIC = 'scraping'
 KAFKA_BOOTSTRAP_SERVERS = 'kafka:9092'
-producer = KafkaProducer(bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS, value_serializer=lambda v: json.dumps(v).encode('utf-8'))
+MAX_RETRIES = 5
+RETRY_DELAY = 2  # delay between retries in seconds
 
+producer = None
+for i in range(MAX_RETRIES):
+    try:
+        producer = KafkaProducer(bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS, value_serializer=lambda v: json.dumps(v).encode('utf-8'))
+        # If the initialization is successful, break from the loop
+        break
+    except NoBrokersAvailable as e:
+        print(f"An error occurred: {e}")
+        if i < MAX_RETRIES - 1:  # No need to sleep on the last iteration
+            time.sleep(RETRY_DELAY)
+        else:
+            raise  # Re-raise the last exception if all retries failed
 
 class NewsCategory(Enum):
     POLITICS = 'politics'
-    # SOCIAL = 'social'
-    # ECONOMY = 'economy'
-    # VARIETIES = 'varities'
-    # SPORT = 'sports'
+    SOCIAL = 'social'
+    ECONOMY = 'economy'
+    VARIETIES = 'varities'
+    SPORT = 'sports'
+
 
 
 class NewsButton(Enum):
@@ -69,7 +85,6 @@ class NewsScraper:
             chmod = subprocess.run(['chmod', '+x', './geckodriver'])
             if chmod.returncode != 0:
                 print("Failed to change permissions of geckodriver")
-
 
 
     def scroll_to_bottom(self) -> None:
@@ -276,30 +291,39 @@ class NewsScraper:
             return article_details
         except Exception as e:
             print(f"An error occurred while processing article on page {pages_to_scrape + 1} of category {category.value}: {e}")
-        
+
 
     def scrape_news(self) -> list[dict]:
         news = []
         for category in NewsCategory:
-            self.initialize_driver(category)
-            pages_to_scrape = self.number_of_pages_to_scrape
+            # Read the last scraped page number from a file
+            try:
+                with open(f'{category.value}_last_page.txt', 'r') as f:
+                    start_page = int(f.read().strip())
+            except (FileNotFoundError, ValueError):
+                start_page = 0
+
+            pages_to_scrape = self.number_of_pages_to_scrape - start_page
 
             while pages_to_scrape > 0:
                 pages_to_scrape -= 1
+                start_page += 1  # Increment the page number
+
+                # Modify the URL based on the current page number
+                url = f'https://am.al-ain.com/section/{category.value}/page-{start_page}.html'
+                self.initialize_driver(url)
+
                 articles = self.get_all_articles()
-                first_articles = articles[:5]
 
                 if not articles:
-                    print(f"No articles found on page {pages_to_scrape + 1} of category {category.value}")
+                    print(f"No articles found on page {start_page} of category {category.value}")
                 else:
-                    for article in first_articles:
-                        scraped_news_article = self.process_article(article, category, pages_to_scrape)
-                        pprint(scraped_news_article)
+                    for article in articles:
+                        scraped_news_article = self.process_article(article, category, start_page - 1)
+                        print(f"Success: {scraped_news_article.get('article_url')}")
 
-                    next_page = self.get_next_page_element()
-                    if next_page.text == NewsButton.NEXT_PAGE.value and pages_to_scrape > 0:
-                        self.driver.execute_script("arguments[0].click();", next_page)
-                    else:
-                        break
-        return news
+                    # Write the last scraped page number to a file
+                    with open(f'{category.value}_last_page.txt', 'w') as f:
+                        f.write(str(start_page))
+    
 
